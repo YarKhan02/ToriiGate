@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -54,7 +55,7 @@ func (p TCPProcessor) Process(packet gopacket.Packet) *model.PacketInfo {
 // HTTPProcessor processes HTTP layers
 type HTTPProcessor struct{}
 
-func (p HTTPProcessor) Process(packet gopacket.Packet) *model.PacketInfo {
+func (p HTTPProcessor) Process(packet gopacket.Packet, sus_sites []string) *model.PacketInfo {
 	appLayer := packet.ApplicationLayer()
 	if appLayer == nil {
 		return nil
@@ -62,16 +63,29 @@ func (p HTTPProcessor) Process(packet gopacket.Packet) *model.PacketInfo {
 
 	// Convert payload to string and extract host
 	payload := string(appLayer.Payload())
+	fmt.Println(payload)
 	
-	var detectedPattern string
-	var pattern = regexp.MustCompile(`(?i)(\S*reddit\.com\S*)`)
-	matches := pattern.FindAllString(payload, -1)
-	if len(matches) > 0 {
-		cleanMatch := regexp.MustCompile(`[^\x20-\x7E]`).ReplaceAllString(matches[0], "") // Remove unreadable characters (non-printable ASCII)
-		detectedPattern = strings.TrimSpace(cleanMatch) // Remove leading/trailing spaces
-		return &model.PacketInfo {
-			PacketType: "HTTP",
-			Host: detectedPattern,
+	urlRegex := regexp.MustCompile(`(?i)(https?://[^\s]+|Host:\s*([^\s]+))`)
+	matches := urlRegex.FindAllString(payload, -1)
+
+	// Precompile regex patterns for suspicious sites
+	susPatterns := make([]*regexp.Regexp, len(sus_sites))
+	for i, site := range sus_sites {
+		susPatterns[i] = regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(site) + `\b`)
+	}
+
+	// Check for suspicious URLs/hosts
+	for _, match := range matches {
+		cleanMatch := regexp.MustCompile(`[^\x20-\x7E]`).ReplaceAllString(match, "") // Remove non-ASCII characters
+		cleanMatch = strings.TrimSpace(cleanMatch)
+
+		for _, pattern := range susPatterns {
+			if pattern.MatchString(cleanMatch) {
+				return &model.PacketInfo{
+					PacketType: "HTTP",
+					Host:       cleanMatch,
+				}
+			}
 		}
 	}
 

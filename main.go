@@ -24,7 +24,7 @@ func sites() ([]string, error) {
 	return suspiciousSites, nil
 }
 
-func monitorPacket([]string) {
+func monitorPacket(sus_sites []string) {
 	device := "en0"
 	var snaplen int32 = 1024
 	var promisc bool = false
@@ -57,7 +57,7 @@ func monitorPacket([]string) {
 		if !bytes.Equal(ethernet.SrcMAC, iface.HardwareAddr) {
 			continue
 		}
-		httpInfo := httpProcessor.Process(packet)
+		httpInfo := httpProcessor.Process(packet, sus_sites)
 		if httpInfo != nil {
 			fmt.Println(httpInfo)
 

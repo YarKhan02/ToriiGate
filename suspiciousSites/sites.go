@@ -1,8 +1,9 @@
 package suspiciousSites
 
 import (
-    "bufio"
-    "net/http"
+	"bufio"
+	// "fmt"
+	"net/http"
 )
 
 func FetchSuspiciousSites(url string) ([]string, error) {
@@ -17,5 +18,6 @@ func FetchSuspiciousSites(url string) ([]string, error) {
     for scanner.Scan() {
         sites = append(sites, scanner.Text())
     }
+    // fmt.Println(sites)
     return sites, scanner.Err()
 }
