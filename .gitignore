@@ -1,0 +1,4 @@
+__pycache__/
+mitmproxy-ca-cert.pem
+suspicious_sites.txt
+venv/
